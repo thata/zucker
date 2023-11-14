@@ -20,12 +20,16 @@ localparam SYSCLK = 25_000_000;
 localparam SYSCLK = 20_000_000;
 `endif
 
-localparam UART0_BAUDRATE = 115200; 
+localparam UART0_BAUDRATE = 115200;
 localparam UART1_BAUDRATE = 115200;
 
 module sysctl #()
 (
+	output wifi_gpio0, // ULX3S only
 
+`ifdef ULX3S
+	output [27:0] gp,
+`else
 	output pmodb1,
 	output pmodb2,
 	output pmodb3,
@@ -34,6 +38,7 @@ module sysctl #()
 	output pmodb8,
 	output pmodb9,
 	output pmodb10,
+`endif
 
 `ifdef OSC100
 	input CLK_100,
@@ -44,6 +49,9 @@ module sysctl #()
 `ifdef OSC48
 	input CLK_48,
 `endif
+`ifdef OSC25
+	input CLK_25,
+`endif
 `ifdef OSC10
 	input CLK_10,
 `endif
@@ -53,10 +61,14 @@ module sysctl #()
 
 	output reg LED_A,
 
+`ifndef ULX3S
 	input UART0_RTS,
+`endif
 	output UART0_RX,
 	input UART0_TX,
+`ifndef ULX3S
 	output reg UART0_CTS,
+`endif
 
 `ifdef EN_SPI
 	inout SPI_MISO,
@@ -260,6 +272,19 @@ module sysctl #()
 `endif
 `endif
 
+`ifdef ULX3S
+	// UARTはハードウェアフロー制御は行わないため、RTS と CTS はループバックさせる
+	// https://strawberry-linux.com/support/50325/1779751
+	reg UART0_CTS;
+	wire UART0_RTS;
+	assign UART0_RTS = UART0_CTS;
+`endif
+
+	assign LED_A = 1'b1;
+
+    // Tie GPIO0, keep board from rebooting
+    assign wifi_gpio0 = 1'b1;
+
 	// CLOCKS
 	// ------
 
@@ -306,6 +331,8 @@ module sysctl #()
    CC_PLL #(
 `ifdef OSC10
       .REF_CLK("10.0"),    // reference input in MHz
+`elsif OSC25
+      .REF_CLK("25.0"),    // reference input in MHz
 `elsif OSC48
       .REF_CLK("48.0"),    // reference input in MHz
 `elsif OSC50
@@ -329,6 +356,8 @@ module sysctl #()
    ) pll_inst (
 `ifdef OSC10
       .CLK_REF(CLK_10),
+`elsif OSC25
+      .CLK_REF(CLK_25),
 `elsif OSC48
       .CLK_REF(CLK_48),
 `elsif OSC50
@@ -589,7 +618,7 @@ module sysctl #()
 `else
 	localparam BRAM_WORDS = 1536;
 `endif
-	reg [31:0] bram [0:BRAM_WORDS-1];   
+	reg [31:0] bram [0:BRAM_WORDS-1];
 	wire [13:0] bsram_word = mem_addr[14:2];
 	wire [10:0] bram_word = mem_addr[14:2];
 `ifdef FPGA_GATEMATE
@@ -690,7 +719,7 @@ module sysctl #()
 	reg rpmem_write;
    reg [2:0] rpmem_state;
 
-   rpmem #() rpmem_i 
+   rpmem #() rpmem_i
 	(
       .clk(clk),
       .resetn(resetn),
@@ -1097,7 +1126,7 @@ module sysctl #()
 	reg [31:0] vram_wdata;
 	reg [3:0] vram_wstrb;
 	reg [2:0] vram_state;
-	
+
 	gpu_text #() gpu_text_i (
 		.clk(clk),
 		.resetn(resetn),
@@ -1121,7 +1150,7 @@ module sysctl #()
 		noise <= noise + 1'b1;
 	end
 
-	audio #() audio_i ( 
+	audio #() audio_i (
 		.clk_pwm(clk10khz),
 		.data_left(8'h00),
 		.data_right(noise),
@@ -1264,7 +1293,7 @@ module sysctl #()
 				gpu_blit_state <= 2;
 
 			end else if (gpu_blit_state == 2) begin
-	
+
 				sram_addr <= gpu_blit_dst;
 				sram_dout <= gpu_blit_data;
 				sram_wrlb <= 1'b1;
@@ -1400,7 +1429,7 @@ module sysctl #()
 
 				// BLOCK RAM
 				(mem_addr < 8192): begin
-			
+
 					if (mem_wstrb[0]) bram[bram_word][7:0] <= mem_wdata[7:0];
 					if (mem_wstrb[1]) bram[bram_word][15:8] <= mem_wdata[15:8];
 					if (mem_wstrb[2]) bram[bram_word][23:16] <= mem_wdata[23:16];
@@ -1414,7 +1443,7 @@ module sysctl #()
 `ifdef EN_BSRAM32
 				// BLOCK RAM AS 32-bit SRAM
 				(((mem_addr & 32'hf000_0000) == 32'h2000_0000) && !gpu_lock): begin
-			
+
 					sram_state <= 1;
 
 					if (mem_wstrb[0]) bsram[bsram_word][7:0] <= mem_wdata[7:0];
@@ -1556,7 +1585,7 @@ module sysctl #()
 					if (mem_wstrb) begin
 
 						if (hram_state == 0 && !hram_ready) begin
- 
+
 							hram_addr <= { (mem_addr & 32'h0fff_ffff) >> 2, 2'b00 };
 							hram_wdata <= mem_wdata;
 							hram_wstrb <= mem_wstrb;
@@ -1989,14 +2018,22 @@ module sysctl #()
 	// CPU
 	// ---
 
-	assign pmodb1 = cpu_trap;
-	assign pmodb2 = resetn;
-	assign pmodb3 = |mem_wstrb;
-	assign pmodb4 = mem_ready;
-	assign pmodb7 = mem_addr[7];
-	assign pmodb8 = mem_addr[8];
-	assign pmodb9 = mem_addr[9];
-	assign pmodb10 = mem_addr[10];
+	assign gp[1] = cpu_trap;
+	assign gp[2] = resetn;
+	assign gp[3] = |mem_wstrb;
+	assign gp[4] = mem_ready;
+	assign gp[7] = mem_addr[7];
+	assign gp[8] = mem_addr[8];
+	assign gp[9] = mem_addr[9];
+	assign gp[10] = mem_addr[10];
+	// assign pmodb1 = cpu_trap;
+	// assign pmodb2 = resetn;
+	// assign pmodb3 = |mem_wstrb;
+	// assign pmodb4 = mem_ready;
+	// assign pmodb7 = mem_addr[7];
+	// assign pmodb8 = mem_addr[8];
+	// assign pmodb9 = mem_addr[9];
+	// assign pmodb10 = mem_addr[10];
 
 	wire cpu_trap;
 	wire [31:0] cpu_irq;

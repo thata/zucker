@@ -115,6 +115,13 @@ else ifeq ($(BOARD), cceval)
 	PR = ~/work/fpga/gatemate/cc-toolchain-linux/bin/p_r/p_r
 	PRFLAGS += -uCIO -ccf boards/cceval.ccf -cCP -crc +uCIO
 	#PRFLAGS += -uCIO -ccf boards/cceval.ccf -cCP -crc +uCIO
+else ifeq ($(BOARD), ulx3s)
+	FAMILY = ecp5
+	DEVICE = 85k
+	PACKAGE = CABGA381
+	LPF = ulx3s_v20.lpf
+	PROG = fujprog
+	FLASH = fujprog -j FLASH
 endif
 
 FAMILY_UC = $(shell echo '$(FAMILY)' | tr '[:lower:]' '[:upper:]')

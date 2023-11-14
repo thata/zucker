@@ -184,4 +184,12 @@
 `define EN_CLK10KHZ
 `define EN_QQSPI
 
+`elsif ULX3S
+
+`define FPGA_ECP5
+`define OSC25
+`define SYSCLK50
+`define EN_SDRAM
+`define EN_UART0
+
 `endif

@@ -59,7 +59,11 @@ module sysctl #()
 	input CLK_RP,
 `endif
 
+`ifdef ULX3S
+	output reg [7:0] led,
+`else
 	output reg LED_A,
+`endif
 
 `ifndef ULX3S
 	input UART0_RTS,
@@ -280,10 +284,14 @@ module sysctl #()
 	assign UART0_RTS = UART0_CTS;
 `endif
 
-	assign LED_A = 1'b1;
+`ifdef ULX3S
+	assign led = mem_addr[7:0];
 
     // Tie GPIO0, keep board from rebooting
     assign wifi_gpio0 = 1'b1;
+
+`endif
+
 
 	// CLOCKS
 	// ------
@@ -1832,13 +1840,14 @@ module sysctl #()
 							mem_ready <= 1;
 						end
 
-						16'h1000: begin
-							if (mem_wstrb)
-								LED_A <= ~mem_wdata[0];
-							else
-								mem_rdata[0] <= ~LED_A;
-							mem_ready <= 1;
-						end
+						// NOTE: LED を別の用途に使いたいので、LED_A を使う部分はコメントアウト
+						// 16'h1000: begin
+						// 	if (mem_wstrb)
+						// 		LED_A <= ~mem_wdata[0];
+						// 	else
+						// 		mem_rdata[0] <= ~LED_A;
+						// 	mem_ready <= 1;
+						// end
 
 						16'h1100: begin
 							if (!mem_wstrb) mem_rdata <= clock_secs;

@@ -37,6 +37,16 @@ start:
 	addi x30, zero, 0
 	addi x31, zero, 0
 
+	// LED を 10101010 に光らせる
+    li t0, 0x000000AA   # LEDコントロールレジスタに書き込みたい値
+    li t1, 0xf0001000   # LEDコントロールレジスタのアドレス
+    sw t0, 0(t1)        # LEDコントロールレジスタへ書き込み
+
+	// 無限ループ
+foo:
+	j foo
+
+
 	/* set stack pointer to end of block ram */
 //	lui sp, %hi(5120)
 //	addi sp, sp, %lo(5120)

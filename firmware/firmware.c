@@ -151,7 +151,7 @@ void getchars(char *buf, int len) {
 char scantoascii(uint8_t scancode) {
 
 	uint8_t tmp;
-	
+
 	if (scancode == 0xf0) {
 		while ((reg_ps2_ctrl & PS2_CTRL_DR) != PS2_CTRL_DR);
 		tmp = reg_ps2_data;

@@ -37,17 +37,30 @@ start:
 	addi x30, zero, 0
 	addi x31, zero, 0
 
-	// 1から10までの合計を求めて、LEDに表示する
-	lw t1, counter
-	lw t0, sum
-loop:
-	beq t1, zero, loop_fin
-	add t0, t0, t1
-	addi t1, t1, -1
-	j loop
-loop_fin:
-    li t1, 0xf0001000   # LEDコントロールレジスタのアドレス
-    sw t0, 0(t1)        # LEDコントロールレジスタへ書き込み
+	// mem[0x4000_0000] = 10
+	li t1, 0x40000000
+	li t0, 10
+	sw t0, 0(t1)
+
+	// mem[0x4000_0004] = 20
+	li t1, 0x40000004
+	li t0, 20
+	sw t0, 0(t1)
+
+	// t2 = mem[0x4000_0000]
+	li t1, 0x40000000
+	lw t2, 0(t1)
+
+	// t3 = mem[0x4000_0004]
+	li t1, 0x40000004
+	lw t3, 0(t1)
+
+	// t0 = t2 + t3
+	add t0, t2, t3
+
+	// 10 + 20 の結果をLEDに表示
+    li t1, 0xf0001000   // LEDコントロールレジスタのアドレス
+    sw t0, 0(t1)        // LEDコントロールレジスタへ書き込み
 
 	// 無限ループ
 foo:
@@ -57,7 +70,7 @@ foo:
 	// - counter = 10
 	// - sum = 0
 counter:
-	.word 10
+	.word 9
 sum:
 	.word 0
 

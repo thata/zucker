@@ -37,8 +37,15 @@ start:
 	addi x30, zero, 0
 	addi x31, zero, 0
 
-	// LED を 10101010 に光らせる
-    li t0, 0x000000AA   # LEDコントロールレジスタに書き込みたい値
+	// 1から10までの合計を求めて、LEDに表示する
+	lw t1, counter
+	lw t0, sum
+loop:
+	beq t1, zero, loop_fin
+	add t0, t0, t1
+	addi t1, t1, -1
+	j loop
+loop_fin:
     li t1, 0xf0001000   # LEDコントロールレジスタのアドレス
     sw t0, 0(t1)        # LEDコントロールレジスタへ書き込み
 
@@ -46,6 +53,13 @@ start:
 foo:
 	j foo
 
+	// データ
+	// - counter = 10
+	// - sum = 0
+counter:
+	.word 10
+sum:
+	.word 0
 
 	/* set stack pointer to end of block ram */
 //	lui sp, %hi(5120)

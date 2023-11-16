@@ -37,6 +37,8 @@ start:
 	addi x30, zero, 0
 	addi x31, zero, 0
 
+	// SDRAMへの値の出し入れ
+
 	// mem[0x4000_0000] = 10
 	li t1, 0x40000000
 	li t0, 10
